@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "RPS";
+}
+<h1>RPS!</h1>
+<!--This row displays the current status for the game-->
+<div class="row">
+    <div class="col-3">
+        <label>Game Status</label>
+    </div>
+    <div class="col-3">
+
+        <span id="gameStatus">The joinGame method isn't invoke yet.</span>
+    
+    </div>
+</div>
+
+
+<div class="row" id="playRow" style="display:none">
+    <div class="col-3">
+        <label>Select Play</label>
+    </div>
+    <div class="col-3">
+        <select class="form-control" id="playSelect">
+            @foreach (var play in Enum.GetValues(typeof(RPS.Enums.Play)))
+            {
+                <option value=@play>@play</option>
+            }
+        </select>
+    </div>
+    <div class="col-3">
+        <button id="playButton">Play</button>
+    </div>
+</div>
+
+
+<div class="row" style="display:none" id="playChoiceRow">
+    <div class="col-3">
+        <label>You chose:</label>
+    </div>
+    <div class="col-3">
+
+        <span id="playChoice"></span>
+
+    </div>
+</div>
+@section Scripts{
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+
+    <script>
+        var setupSignalR = function () {
+            var connection = new signalR.HubConnectionBuilder()
+                .withUrl("/gamehub")
+                .build();
+            connection.start()
+                .then(() => connection.invoke('joinGame'));
+            return connection;
+        };
+        var connection = setupSignalR();
+        connection.on("@RPS.Constants.GameEventNames.WaitingForPlayerToJoin",
+            () => {$("#gameStatus").html("Waiting for another player to join.")})
+        connection.on("@RPS.Constants.GameEventNames.GameStart",
+            () => {
+                $("#gameStatus").html("In Progress");
+                $("#playRow").show();
+            })
+        connection.on("@RPS.Constants.GameEventNames.WaitingForPlayerToPlay",
+            () => { $("#gameStatus").html("Waiting other player to select") });
+        connection.on("@RPS.Constants.GameEventNames.GameEnd",
+            (update) => { $("#gameStatus").html(update) });
+        $("#playButton").click(function () {
+            connection.invoke("selectPlay", $("#playSelect").val());
+            $("#playChoiceRow").show();
+            $("#playChoice").html($("#playSelect").val());
+            $("#playRow").hide();
+        })
+    </script>
+}
